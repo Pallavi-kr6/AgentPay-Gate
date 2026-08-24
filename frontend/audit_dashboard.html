@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentPay Gate — Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A0E14;
+    --surface:#10151F;
+    --surface-2:#161C28;
+    --rule: rgba(255,255,255,0.08);
+    --text:#E7EAF0;
+    --text-dim:#8B93A6;
+    --accent:#4C8DFF;      /* Razorpay-blue, deliberate: this is a Razorpay-facing tool */
+    --allow:#3ECF8E;
+    --approval:#F5A623;
+    --block:#FF5C6C;
+    --failed:#FF5C6C;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ink); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+  }
+  header{
+    padding:28px 32px 20px; border-bottom:1px solid var(--rule);
+    display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:12px;
+  }
+  .brand{display:flex; align-items:baseline; gap:12px;}
+  .brand .mark{
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px;
+    color:var(--ink); background:var(--accent); padding:3px 8px; border-radius:4px; letter-spacing:0.02em;
+  }
+  h1{font-size:19px; font-weight:600; margin:0; letter-spacing:-0.01em;}
+  .sub{color:var(--text-dim); font-size:13px; margin-top:2px;}
+  #mode-pill{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim);
+    border:1px solid var(--rule); padding:4px 10px; border-radius:20px;
+  }
+
+  main{max-width:1100px; margin:0 auto; padding:28px 32px 80px;}
+
+  /* --- spend gauge: the signature element. the whole point of this system
+     is that the agent operates inside bounds, so the bounds get top billing. */
+  .gauge-card{
+    background:var(--surface); border:1px solid var(--rule); border-radius:10px;
+    padding:22px 24px; margin-bottom:28px;
+  }
+  .gauge-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; flex-wrap:wrap; gap:8px;}
+  .gauge-label{font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); font-weight:600;}
+  .gauge-amounts{font-family:'JetBrains Mono',monospace; font-size:14px;}
+  .gauge-amounts .spent{color:var(--text); font-weight:600;}
+  .gauge-amounts .cap{color:var(--text-dim);}
+  .gauge-track{
+    position:relative; height:10px; background:var(--surface-2); border-radius:6px; overflow:visible;
+  }
+  .gauge-fill{
+    height:100%; border-radius:6px; background:linear-gradient(90deg, var(--allow), var(--accent));
+    transition:width .4s ease;
+  }
+  .gauge-tick{
+    position:absolute; top:-4px; width:2px; height:18px; background:var(--text-dim); opacity:0.6;
+  }
+  .gauge-tick .tick-label{
+    position:absolute; top:22px; left:50%; transform:translateX(-50%);
+    font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); white-space:nowrap;
+  }
+  .bounds-row{display:flex; gap:24px; margin-top:32px; flex-wrap:wrap;}
+  .bound-chip{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim);}
+  .bound-chip b{color:var(--text); font-weight:600;}
+
+  /* --- demo trigger panel --- */
+  .triggers{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:28px;}
+  .trigger-btn{
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    background:var(--surface); color:var(--text); border:1px solid var(--rule);
+    padding:10px 16px; border-radius:8px; cursor:pointer; transition:.15s;
+  }
+  .trigger-btn:hover{border-color:var(--accent); color:var(--accent);}
+  .trigger-btn:active{transform:translateY(1px);}
+  .trigger-btn.danger:hover{border-color:var(--block); color:var(--block);}
+
+  section h2{
+    font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim);
+    font-weight:600; margin:0 0 14px;
+  }
+
+  /* --- the ledger itself --- */
+  .trace-card{
+    background:var(--surface); border:1px solid var(--rule); border-radius:10px;
+    margin-bottom:12px; overflow:hidden;
+  }
+  .trace-summary{
+    display:flex; align-items:center; gap:14px; padding:14px 18px; cursor:pointer;
+    border-left:3px solid var(--text-dim);
+  }
+  .trace-summary.ALLOW, .trace-summary.PAID{border-left-color:var(--allow);}
+  .trace-summary.REQUIRE_APPROVAL, .trace-summary.AWAITING_APPROVAL, .trace-summary.AWAITING_PAYMENT{border-left-color:var(--approval);}
+  .trace-summary.BLOCK, .trace-summary.BLOCKED, .trace-summary.FAILED{border-left-color:var(--block);}
+
+  .status-pill{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+    padding:3px 9px; border-radius:20px; letter-spacing:0.03em; white-space:nowrap;
+  }
+  .status-pill.ALLOW, .status-pill.PAID{background:rgba(62,207,142,0.15); color:var(--allow);}
+  .status-pill.REQUIRE_APPROVAL, .status-pill.AWAITING_APPROVAL, .status-pill.AWAITING_PAYMENT{background:rgba(245,166,35,0.15); color:var(--approval);}
+  .status-pill.BLOCK, .status-pill.BLOCKED, .status-pill.FAILED{background:rgba(255,92,108,0.15); color:var(--block);}
+
+  .trace-id{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim);}
+  .trace-reason{flex:1; font-size:13px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .trace-amount{font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600;}
+  .chevron{color:var(--text-dim); font-size:11px; transition:transform .15s;}
+  .trace-card.open .chevron{transform:rotate(90deg);}
+
+  .trace-events{display:none; border-top:1px solid var(--rule); padding:6px 18px 16px;}
+  .trace-card.open .trace-events{display:block;}
+  .event-row{
+    display:grid; grid-template-columns:150px 130px 1fr; gap:14px;
+    padding:9px 0; border-bottom:1px solid var(--rule); font-size:12.5px;
+  }
+  .event-row:last-child{border-bottom:none;}
+  .event-ts{font-family:'JetBrains Mono',monospace; color:var(--text-dim); font-size:11px;}
+  .event-type{font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--accent); font-size:11.5px;}
+  .event-reason{color:var(--text);}
+
+  .empty{color:var(--text-dim); font-size:13px; padding:24px; text-align:center; border:1px dashed var(--rule); border-radius:10px;}
+  footer{max-width:1100px; margin:0 auto; padding:0 32px 40px; color:var(--text-dim); font-size:12px;}
+  footer a{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="mark">AGENTPAY GATE</span>
+    <div>
+      <h1>Ledger</h1>
+      <div class="sub">Every money action an agent has attempted against this merchant — explained, bounded, gated.</div>
+    </div>
+  </div>
+  <span id="mode-pill">loading…</span>
+</header>
+
+<main>
+
+  <div class="gauge-card">
+    <div class="gauge-head">
+      <span class="gauge-label">Today's agent spend</span>
+      <span class="gauge-amounts"><span class="spent" id="spent-amt">₹0</span> <span class="cap">/ ₹0 daily cap</span></span>
+    </div>
+    <div class="gauge-track">
+      <div class="gauge-fill" id="gauge-fill" style="width:0%"></div>
+      <div class="gauge-tick" id="tick-approval"><span class="tick-label">approval&nbsp;gate</span></div>
+    </div>
+    <div class="bounds-row" id="bounds-row"></div>
+  </div>
+
+  <div class="triggers">
+    <button class="trigger-btn" onclick="demoBuy('sku_earbuds_01', false)">▸ Buy earbuds (₹1,299 — auto ALLOW)</button>
+    <button class="trigger-btn" onclick="demoBuy('sku_speaker_01', false)">▸ Buy JBL speaker (₹2,299 — REQUIRE_APPROVAL)</button>
+    <button class="trigger-btn" onclick="demoBuy('sku_laptop_01', false)">▸ Buy laptop (₹42,999 — BLOCKED category)</button>
+    <button class="trigger-btn danger" onclick="demoBuy('sku_tshirt_01', true)">▸ Force a decline (graceful failure)</button>
+    <button class="trigger-btn" onclick="loadAll()">↻ Refresh</button>
+  </div>
+
+  <section>
+    <h2>Recent purchase attempts</h2>
+    <div id="ledger"></div>
+  </section>
+
+</main>
+
+<footer>
+  Backend: <a id="backend-link" href="#" target="_blank">/docs</a> · Built for the Razorpay AI Buildathon, Track 1 — AI Growth &amp; Agentic Commerce.
+</footer>
+
+<script>
+const API = window.location.origin;
+
+async function j(url, opts){
+  const r = await fetch(url, opts);
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function fmt(n){ return '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+
+async function loadBounds(){
+  const b = await j(`${API}/policy/bounds`);
+  document.getElementById('spent-amt').textContent = fmt(b.daily_spent_so_far);
+  document.querySelector('.gauge-amounts .cap').textContent = `/ ${fmt(b.daily_cap)} daily cap`;
+  const pct = Math.min(100, (b.daily_spent_so_far / b.daily_cap) * 100);
+  document.getElementById('gauge-fill').style.width = pct + '%';
+  const approvalPct = Math.min(100, (b.requires_approval_above / b.daily_cap) * 100);
+  document.getElementById('tick-approval').style.left = approvalPct + '%';
+  document.getElementById('bounds-row').innerHTML = `
+    <span class="bound-chip">Per-transaction cap <b>${fmt(b.per_transaction_cap)}</b></span>
+    <span class="bound-chip">Approval threshold <b>${fmt(b.requires_approval_above)}</b></span>
+    <span class="bound-chip">Blocked categories <b>${b.blocked_categories.join(', ') || 'none'}</b></span>
+    <span class="bound-chip">Max retries on failure <b>${b.max_retries_on_failure}</b></span>
+  `;
+  document.getElementById('mode-pill').textContent =
+    `provider · daily spend ${fmt(b.daily_spent_so_far)} of ${fmt(b.daily_cap)}`;
+}
+
+function groupByTrace(events){
+  const groups = {};
+  for(const e of events){
+    (groups[e.trace_id] ||= []).push(e);
+  }
+  return Object.values(groups).map(evts => evts.sort((a,b)=>a.id-b.id));
+}
+
+function finalStatus(evts){
+  const last = evts[evts.length-1];
+  const map = {
+    PURCHASE_COMPLETED:'PAID', PURCHASE_FAILED_FINAL:'FAILED', PURCHASE_BLOCKED:'BLOCKED',
+    APPROVAL_REQUIRED:'AWAITING_APPROVAL', AWAITING_PAYMENT:'AWAITING_PAYMENT',
+  };
+  return map[last.event_type] || last.decision || 'PENDING';
+}
+
+async function loadLedger(){
+  const events = await j(`${API}/audit/recent?limit=200`);
+  const groups = groupByTrace(events).sort((a,b) => b[0].id - a[0].id);
+  const ledger = document.getElementById('ledger');
+  if(groups.length === 0){
+    ledger.innerHTML = `<div class="empty">No purchase attempts yet. Click a button above, or point the buyer agent at this backend.</div>`;
+    return;
+  }
+  ledger.innerHTML = groups.map(evts => {
+    const status = finalStatus(evts);
+    const first = evts[0];
+    const reasonEvt = [...evts].reverse().find(e => e.reason);
+    const amountEvt = evts.find(e => e.payload && e.payload.amount !== undefined);
+    const amount = amountEvt ? amountEvt.payload.amount : 0;
+    return `
+    <div class="trace-card" id="card-${first.trace_id}">
+      <div class="trace-summary ${status}" onclick="toggle('${first.trace_id}')">
+        <span class="status-pill ${status}">${status}</span>
+        <span class="trace-id">${first.trace_id}</span>
+        <span class="trace-reason">${reasonEvt ? reasonEvt.reason : ''}</span>
+        <span class="trace-amount">${fmt(amount)}</span>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="trace-events">
+        ${evts.map(e => `
+          <div class="event-row">
+            <span class="event-ts">${e.timestamp.split('.')[0].replace('T',' ')}</span>
+            <span class="event-type">${e.event_type}</span>
+            <span class="event-reason">${e.reason || Object.entries(e.payload||{}).map(([k,v])=>`${k}=${v}`).join(', ')}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggle(traceId){
+  document.getElementById(`card-${traceId}`).classList.toggle('open');
+}
+
+async function demoBuy(productId, forceFail){
+  const url = `${API}/purchase${forceFail ? '?force_fail=true' : ''}`;
+  await fetch(url, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({product_id: productId, quantity: 1}),
+  });
+  await loadAll();
+}
+
+async function loadAll(){
+  await Promise.all([loadBounds(), loadLedger()]);
+}
+
+document.getElementById('backend-link').href = `${API}/docs`;
+loadAll();
+setInterval(loadAll, 6000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Approve payment — AgentPay Gate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A0E14; --surface:#10151F; --rule:rgba(255,255,255,0.08);
+    --text:#E7EAF0; --text-dim:#8B93A6; --accent:#4C8DFF;
+    --allow:#3ECF8E; --block:#FF5C6C;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:var(--ink); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card{
+    width:100%; max-width:440px; background:var(--surface); border:1px solid var(--rule);
+    border-radius:14px; padding:32px; text-align:center;
+  }
+  .mark{
+    display:inline-block; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12px;
+    color:var(--ink); background:var(--accent); padding:3px 8px; border-radius:4px; margin-bottom:18px;
+  }
+  h1{font-size:17px; margin:0 0 6px; font-weight:600;}
+  .desc{color:var(--text-dim); font-size:13px; margin-bottom:24px; line-height:1.5;}
+  .amount{font-family:'JetBrains Mono',monospace; font-size:36px; font-weight:700; margin-bottom:4px;}
+  .reason-box{
+    background:rgba(76,141,255,0.08); border:1px solid rgba(76,141,255,0.25); border-radius:8px;
+    padding:12px 14px; font-size:12.5px; color:var(--text); text-align:left; margin:20px 0; line-height:1.5;
+  }
+  .reason-box b{color:var(--accent);}
+  .actions{display:flex; gap:10px; margin-top:22px;}
+  button{
+    flex:1; padding:13px; border-radius:9px; border:none; font-size:14px; font-weight:600;
+    font-family:'Inter',sans-serif; cursor:pointer; transition:.15s;
+  }
+  #approve{background:var(--allow); color:#04150D;}
+  #approve:hover{filter:brightness(1.08);}
+  #decline{background:transparent; color:var(--block); border:1px solid rgba(255,92,108,0.4);}
+  #decline:hover{background:rgba(255,92,108,0.08);}
+  .hint{font-size:11px; color:var(--text-dim); margin-top:16px; font-family:'JetBrains Mono',monospace;}
+  .result{display:none; margin-top:18px; padding:16px; border-radius:9px; font-size:13.5px;}
+  .result.ok{display:block; background:rgba(62,207,142,0.1); color:var(--allow); border:1px solid rgba(62,207,142,0.3);}
+  .result.fail{display:block; background:rgba(255,92,108,0.1); color:var(--block); border:1px solid rgba(255,92,108,0.3);}
+  .trace-id{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim); margin-top:14px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <span class="mark">AGENTPAY GATE</span>
+  <h1>An agent wants to complete this purchase</h1>
+  <div class="desc">This amount is above the auto-approve threshold, so nothing has been charged yet — the agent is waiting for you.</div>
+  <div class="amount" id="amount">₹—</div>
+  <div class="reason-box" id="reason-box">Loading policy reason…</div>
+
+  <div class="actions" id="actions">
+    <button id="approve" onclick="decide('captured')">✓ Approve &amp; pay</button>
+    <button id="decline" onclick="decide('failed')">✕ Decline</button>
+  </div>
+  <div class="hint">Simulates Razorpay test UPI: success@razorpay / failure@razorpay</div>
+
+  <div class="result" id="result"></div>
+  <div class="trace-id" id="trace-line"></div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const traceId = params.get('trace_id') || '';
+const orderId = params.get('order_id') || '';
+const amount = params.get('amount');
+const API = window.location.origin;
+
+document.getElementById('trace-line').textContent = `trace_id: ${traceId} · order_id: ${orderId}`;
+if(amount) document.getElementById('amount').textContent = '₹' + Number(amount).toLocaleString('en-IN');
+
+async function loadReason(){
+  try{
+    const r = await fetch(`${API}/audit/${traceId}`);
+    const trail = await r.json();
+    const approvalEvt = [...trail].reverse().find(e => e.event_type === 'APPROVAL_REQUIRED');
+    if(approvalEvt){
+      document.getElementById('reason-box').innerHTML = `<b>Why you're seeing this:</b> ${approvalEvt.reason}`;
+    }
+    const closed = trail.find(e => ['PURCHASE_COMPLETED','PURCHASE_FAILED_FINAL'].includes(e.event_type));
+    if(closed) showResult(closed.event_type === 'PURCHASE_COMPLETED');
+  }catch(e){
+    document.getElementById('reason-box').textContent = 'Could not load policy reason (backend unreachable?).';
+  }
+}
+
+function showResult(success){
+  document.getElementById('actions').style.display = 'none';
+  const box = document.getElementById('result');
+  box.className = 'result ' + (success ? 'ok' : 'fail');
+  box.textContent = success
+    ? '✓ Payment approved and captured. The agent has been notified.'
+    : '✕ Payment declined. No money moved. The agent has been notified and will not retry automatically.';
+}
+
+async function decide(mockStatus){
+  const paymentId = 'manual_' + Math.random().toString(36).slice(2, 12);
+  const r = await fetch(`${API}/purchase/${traceId}/confirm?payment_id=${paymentId}&mock_status=${mockStatus}`, {method:'POST'});
+  const body = await r.json();
+  showResult(body.status === 'PAID');
+}
+
+// If Razorpay's own hosted Payment Link redirected back here with a real
+// payment id (real mode), auto-confirm using the actual payment status
+// instead of showing the manual buttons.
+const rzpPaymentId = params.get('razorpay_payment_id');
+if(rzpPaymentId){
+  document.getElementById('actions').style.display = 'none';
+  fetch(`${API}/purchase/${traceId}/confirm?payment_id=${rzpPaymentId}`, {method:'POST'})
+    .then(r => r.json()).then(body => showResult(body.status === 'PAID'));
+}
+
+loadReason();
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "sku_earbuds_01",
+    "name": "Boat Rockerz Wireless Earbuds",
+    "category": "electronics_low_value",
+    "price": 1299,
+    "currency": "INR",
+    "stock": 42,
+    "tags": ["earbuds", "audio", "wireless", "bluetooth"],
+    "description": "In-ear wireless earbuds, 24h battery, IPX4 water resistance."
+  },
+  {
+    "id": "sku_earbuds_02",
+    "name": "Noise Buds Pro X",
+    "category": "electronics_low_value",
+    "price": 1899,
+    "currency": "INR",
+    "stock": 17,
+    "tags": ["earbuds", "audio", "wireless", "anc"],
+    "description": "ANC wireless earbuds with app-based EQ and 32h total playback."
+  },
+  {
+    "id": "sku_watch_01",
+    "name": "Fire-Boltt Smartwatch",
+    "category": "electronics_high_value",
+    "price": 3499,
+    "currency": "INR",
+    "stock": 9,
+    "tags": ["watch", "wearable", "fitness"],
+    "description": "AMOLED smartwatch with SpO2, HR monitor and 7-day battery."
+  },
+  {
+    "id": "sku_speaker_01",
+    "name": "JBL Go 3 Portable Speaker",
+    "category": "electronics_low_value",
+    "price": 2299,
+    "currency": "INR",
+    "stock": 25,
+    "tags": ["speaker", "audio", "bluetooth", "portable"],
+    "description": "Compact waterproof Bluetooth speaker with punchy bass."
+  },
+  {
+    "id": "sku_tshirt_01",
+    "name": "Cotton Crew-Neck T-Shirt (Black)",
+    "category": "apparel",
+    "price": 499,
+    "currency": "INR",
+    "stock": 120,
+    "tags": ["tshirt", "apparel", "cotton", "casual"],
+    "description": "100% combed cotton, regular fit, machine washable."
+  },
+  {
+    "id": "sku_book_01",
+    "name": "Atomic Habits (Paperback)",
+    "category": "books",
+    "price": 399,
+    "currency": "INR",
+    "stock": 60,
+    "tags": ["book", "self-help", "paperback"],
+    "description": "Bestselling book on building good habits and breaking bad ones."
+  },
+  {
+    "id": "sku_bottle_01",
+    "name": "Milton Thermosteel Bottle 1L",
+    "category": "home",
+    "price": 799,
+    "currency": "INR",
+    "stock": 33,
+    "tags": ["bottle", "home", "steel", "insulated"],
+    "description": "Double-wall vacuum insulated bottle, keeps liquids hot/cold 12h."
+  },
+  {
+    "id": "sku_laptop_01",
+    "name": "Dell Inspiron 15 Laptop",
+    "category": "electronics_high_value",
+    "price": 42999,
+    "currency": "INR",
+    "stock": 4,
+    "tags": ["laptop", "electronics", "computer"],
+    "description": "15.6-inch FHD laptop, i5, 16GB RAM, 512GB SSD."
+  }
+]

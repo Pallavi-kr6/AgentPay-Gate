@@ -1,0 +1,9 @@
+{
+  "currency": "INR",
+  "per_transaction_cap": 5000,
+  "daily_cap": 8000,
+  "requires_approval_above": 1500,
+  "blocked_categories": ["electronics_high_value"],
+  "max_retries_on_failure": 1,
+  "approval_link_expiry_minutes": 15
+}

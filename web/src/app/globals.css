@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* ────────────────────────────────────────────────────────────────────────
+   AgentPay Gate design tokens.
+
+   Distinct identity, not a clone: near-black charcoal surfaces (not pure
+   OLED black), a single restrained blue accent used only for interactive
+   elements/links (never for "success"), and semantic color reserved
+   strictly for policy/payment state so it stays meaningful instead of
+   decorative. Everything else is neutral gray.
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --background: #09090b;
+  --surface: #111113;
+  --surface-2: #18181b;
+  --surface-hover: #1c1c1f;
+
+  --border: #232327;
+  --border-strong: #2e2e33;
+
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+
+  --accent: #5b8def;
+  --accent-foreground: #06101f;
+
+  --success: #34d399;
+  --success-bg: rgba(52, 211, 153, 0.12);
+  --success-border: rgba(52, 211, 153, 0.28);
+
+  --warning: #f5a524;
+  --warning-bg: rgba(245, 165, 36, 0.12);
+  --warning-border: rgba(245, 165, 36, 0.28);
+
+  --danger: #f5555f;
+  --danger-bg: rgba(245, 85, 95, 0.12);
+  --danger-border: rgba(245, 85, 95, 0.28);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
